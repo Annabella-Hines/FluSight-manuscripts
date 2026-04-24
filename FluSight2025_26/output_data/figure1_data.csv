@@ -1,0 +1,22 @@
+"location","target","target_end_date","forecast_date","model","location_name","median","lower_50","upper_50","lower_95","upper_95","observed"
+"US","0 wk inc flu hosp",2025-11-22,2025-11-22,"FluSight-ensemble","National","2603",2044,2963,1277,4119,3577
+"US","1 wk inc flu hosp",2025-11-29,2025-11-22,"FluSight-ensemble","National","3183",2472,3893,1463,6180,5209
+"US","2 wk inc flu hosp",2025-12-06,2025-11-22,"FluSight-ensemble","National","3791",2843,5193,1607,9097,7431
+"US","3 wk inc flu hosp",2025-12-13,2025-11-22,"FluSight-ensemble","National","4727",3306,6683,1707,13273,11118
+"US","0 wk inc flu hosp",2025-12-27,2025-12-27,"FluSight-ensemble","National","27549",23866,30262,17155,36145,37450
+"US","1 wk inc flu hosp",2026-01-03,2025-12-27,"FluSight-ensemble","National","30267",24099,37200,15864,50995,42451
+"US","2 wk inc flu hosp",2026-01-10,2025-12-27,"FluSight-ensemble","National","31389",24036,39287,15031,54621,29812
+"US","3 wk inc flu hosp",2026-01-17,2025-12-27,"FluSight-ensemble","National","30159",22523,40227,14023,59130,19683
+"US","0 wk inc flu hosp",2026-01-31,2026-01-31,"FluSight-ensemble","National","12598",9992,14848,7094,20681,15679
+"US","1 wk inc flu hosp",2026-02-07,2026-01-31,"FluSight-ensemble","National","10783",8090,13766,4493,21326,15899
+"US","2 wk inc flu hosp",2026-02-14,2026-01-31,"FluSight-ensemble","National","9174",6233,13506,3109,20759,16169
+"US","3 wk inc flu hosp",2026-02-21,2026-01-31,"FluSight-ensemble","National","7610",4811,12783,1966,21573,14676
+"US","0 wk inc flu hosp",2026-03-07,2026-03-07,"FluSight-ensemble","National","8894",7682,10670,5480,14200,9530
+"US","1 wk inc flu hosp",2026-03-14,2026-03-07,"FluSight-ensemble","National","7995",6136,9841,3355,15188,7726
+"US","2 wk inc flu hosp",2026-03-21,2026-03-07,"FluSight-ensemble","National","6704",4815,8908,2121,14898,6018
+"US","3 wk inc flu hosp",2026-03-28,2026-03-07,"FluSight-ensemble","National","6026",3891,7622,1388,14851,3126
+"US","0 wk inc flu hosp",2026-04-11,2026-04-11,"FluSight-ensemble","National","2223",1702,2615,926,3780,1880
+"US",NA,2026-04-04,NA,NA,"National","Intentionally left blank for visualization purposes",NA,NA,NA,NA,2643
+"US",NA,2026-02-28,NA,NA,"National","Intentionally left blank for visualization purposes",NA,NA,NA,NA,11071
+"US",NA,2026-01-24,NA,NA,"National","Intentionally left blank for visualization purposes",NA,NA,NA,NA,16740
+"US",NA,2025-12-20,NA,NA,"National","Intentionally left blank for visualization purposes",NA,NA,NA,NA,21005

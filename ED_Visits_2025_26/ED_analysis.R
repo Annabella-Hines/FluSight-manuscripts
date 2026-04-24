@@ -64,7 +64,7 @@ model_metadata <- hubData::load_model_metadata(
 
 #connect to FluSight Hub
 hub_con <- connect_hub(flusight_forecast_data) 
-raw_forecasts <- hub_con %>%
+raw_forecasts_ed <- hub_con %>%
   dplyr::filter(
     reference_date >= "2025-11-01", #UMass submitted test forecasts prior to this date 
     reference_date <= "2026-05-31",
@@ -81,7 +81,7 @@ raw_forecasts <- hub_con %>%
 
 
 # pull raw target data 
-raw_target <-readr::read_csv("https://raw.githubusercontent.com/cdcepi/FluSight-forecast-hub/refs/heads/main/target-data/target-ed-visits-prop.csv")%>% 
+raw_target_ed <-readr::read_csv("https://raw.githubusercontent.com/cdcepi/FluSight-forecast-hub/refs/heads/main/target-data/target-ed-visits-prop.csv")%>% 
   mutate(date = as.Date(date)) %>% mutate(value=value*100)
 
 # Data Quality issues from these dates and jurisdictions
@@ -91,7 +91,7 @@ raw_target <-readr::read_csv("https://raw.githubusercontent.com/cdcepi/FluSight-
 # dates_to_remove_wa <- as.Date(c("2025-05-17", "2025-05-24", "2025-05-31", "2025-06-07"))
 # dates_to_remove_az <- as.Date(c("2025-01-18", "2025-01-25"))
 
-raw_data <- raw_forecasts %>% 
+raw_data_ed <- raw_forecasts_ed %>% 
   dplyr::filter(horizon > -1) %>% 
   dplyr::filter(output_type == "quantile") %>% 
   mutate(target_end_date = as.Date(target_end_date)) %>% 
@@ -110,39 +110,39 @@ raw_data <- raw_forecasts %>%
   # )
 
 
-all_dat25 <- raw_data %>% 
+all_dat25_ed <- raw_data_ed %>% 
   dplyr::rename("forecast_date" = reference_date, "type" = output_type, "value" = prediction) %>% 
   unite(target, horizon, target, sep = " ", remove = T) %>% 
   dplyr::select(location, target, target_end_date, forecast_date, type, quantile, value, model, location_name) %>% 
   mutate(location_name = ifelse(location == 'US', 'National', location_name))%>% 
   mutate(logvalue = log1p(value))
 
-obs_data25 <- raw_target %>%
+obs_data25_ed <- raw_target_ed %>%
   mutate(target_end_date = as.Date(date, "%m/%d/%y"),
          location_name = ifelse(location == 'US', 'National', location_name), 
          report = value,) %>%
   select(-date) %>%
-  filter(target_end_date %in% as.Date(unique(all_dat25$target_end_date)))%>% 
+  filter(target_end_date %in% as.Date(unique(all_dat25_ed$target_end_date)))%>% 
   dplyr::select(location, location_name, report, target_end_date) %>% 
   mutate(logreport = log1p(report))
 
-location.names25 = obs_data25 %>% select(location, location_name) %>% unique()
+location.names25 = obs_data25_ed %>% select(location, location_name) %>% unique()
 
 ## Inclusion criteria: models that submitted at least 75% of forecasts, not US
-include25 <- all_dat25 %>% 
+include25_ed <- all_dat25_ed %>% 
   mutate(baseline_n_forecasts = sum(!is.na(value[model == "FluSight-baseline"]))) %>% 
   group_by(model) %>% 
   mutate(n_forecasts = sum(!is.na(value)),
          n_locations = length(unique(location))) %>%
   mutate(per_forecasts = round((n_forecasts/(baseline_n_forecasts))*100,2),
-         per_locations = round((n_locations/length(unique(all_dat25$location)))*100,2)) %>% 
+         per_locations = round((n_locations/length(unique(all_dat25_ed$location)))*100,2)) %>% 
   filter(per_forecasts >= 75) %>%
   filter(location !="US") %>% 
   select(model,n_forecasts, per_forecasts, n_locations, per_locations) %>% 
   distinct() %>% 
   ungroup()
 
-models_below_75 <- all_dat25 %>%
+models_below_75_ed <- all_dat25_ed %>%
   mutate(baseline_n_forecasts = sum(!is.na(value[model == "FluSight-baseline"]))) %>% 
   group_by(model) %>% 
   mutate(n_forecasts = sum(!is.na(value)),
@@ -157,14 +157,14 @@ models_below_75 <- all_dat25 %>%
 #function for prepping the data for scoring 
 ### inclusion criteria were added to dat_for_scores_function 
 
-dat_for_scores25 <- dat_for_scores_function_ed(all_dat25, obs_data25, include25) 
-dat_for_scores25_log <- dat_for_scores_function_log_ed(all_dat25, obs_data25, include25) 
+dat_for_scores25_ed <- dat_for_scores_function_ed(all_dat25_ed, obs_data25_ed, include25_ed) 
+dat_for_scores25_log_ed <- dat_for_scores_function_log_ed(all_dat25_ed, obs_data25_ed, include25_ed) 
 
 ## Getting coverage from non-log-transformed values
-raw_scores25 <- dat_for_scores25 %>% select(-c(logvalue, logreport)) %>% scoringutils::score()
+raw_scores25_ed <- dat_for_scores25_ed %>% select(-c(logvalue, logreport)) %>% scoringutils::score()
 
-wis_season_by_model_25 <- raw_scores25 %>%
-  filter(location != "US", model %in% include25$model) %>% 
+wis_season_by_model_25_ed <- raw_scores25_ed %>%
+  filter(location != "US", model %in% include25_ed$model) %>% 
   add_coverage(ranges = c(50, 95), by = c("model")) %>%
   summarise_scores(by = c("model"), relative_skill=TRUE,  baseline="FluSight-baseline", na.rm  = TRUE)%>%
   mutate(cov_50=round(coverage_50*100,2),
@@ -173,10 +173,10 @@ wis_season_by_model_25 <- raw_scores25 %>%
   select(model, cov_50, cov_95) ## rel wis, wis, and mae only on log scores 
 
 ## scoring log-transformed values
-raw_scores25_log <- dat_for_scores25_log %>% select(-c(value, report)) %>% scoringutils::score()
+raw_scores25_log_ed <- dat_for_scores25_log_ed %>% select(-c(value, report)) %>% scoringutils::score()
 
-wis_season_by_model_25_log <- raw_scores25_log %>%
-  filter(location != "US", model %in% include25$model) %>% 
+wis_season_by_model_25_log_ed <- raw_scores25_log_ed %>%
+  filter(location != "US", model %in% include25_ed$model) %>% 
   summarise_scores(by = c("model"),relative_skill=TRUE,  baseline="FluSight-baseline", na.rm  = TRUE)%>%
   mutate(wis=round(interval_score,2),
          mae=round(ae_median,2),
@@ -184,44 +184,44 @@ wis_season_by_model_25_log <- raw_scores25_log %>%
   select(model, wis,rel_wis, mae) ## Not using log coverage 
 
 ## joining log and non-log transformed scores 
-wis_season_by_model <- left_join(wis_season_by_model_25_log, wis_season_by_model_25, join_by("model")) ## Coverage is not log-transformed, rel wis is. 
+wis_season_by_model_ed <- left_join(wis_season_by_model_25_log_ed, wis_season_by_model_25_ed, join_by("model")) ## Coverage is not log-transformed, rel wis is. 
 
 
 ## this starts creation of output for table 1
-inc.rankings_all25 <- include25 %>%
-  left_join(wis_season_by_model, by="model")
+inc.rankings_all25_ed <- include25_ed %>%
+  left_join(wis_season_by_model_ed, by="model")
 
 ## method for checking to see coverage %
-WIS_all25 <- raw_scores25_log %>% summarise_scores(na.rm = TRUE) %>% 
+WIS_all25_ed <- raw_scores25_log_ed %>% summarise_scores(na.rm = TRUE) %>% 
   mutate(wis=round(interval_score,2))
 
-dat_25 <- dat_for_scores25 %>% select(-c(logvalue, logreport)) %>% 
+dat_25_ed <- dat_for_scores25_ed %>% select(-c(logvalue, logreport)) %>% 
   pivot_wider(names_from = c(type, quantile), values_from=c(prediction, true_value)) %>% 
   select(target, model, forecast_date, location, date, prediction_quantile_0.025, prediction_quantile_0.25, 
          prediction_quantile_0.5, prediction_quantile_0.75, prediction_quantile_0.975, true_value_quantile_0.5)
 
-WIS_all25 <- merge(WIS_all25, dat_25, by = c("target", "model", "forecast_date", "location", "date")) %>% 
+WIS_all25_ed <- merge(WIS_all25_ed, dat_25_ed, by = c("target", "model", "forecast_date", "location", "date")) %>% 
   rename("report" = "true_value_quantile_0.5") %>% 
   mutate(coverage.50 = ifelse(report >= prediction_quantile_0.25 & report <= prediction_quantile_0.75,T,F),  
          coverage.95 = ifelse(report >= prediction_quantile_0.025 & report <= prediction_quantile_0.975,T,F))
 
 # pull out data on forecasts 
-WIS_alllocations25 <- WIS_all25
+WIS_alllocations25_ed <- WIS_all25_ed
 
-WIS_all25 = filter(WIS_all25, location_name != "National")
+WIS_all25_ed = filter(WIS_all25_ed, location_name != "National")
 
-WIS_Season25 <- WIS_all25
+WIS_Season25_ed <- WIS_all25_ed
 
-and_coverage_25 <- WIS_Season25 %>% 
+and_coverage_25_ed <- WIS_Season25_ed %>% 
   group_by(model) %>% 
   summarise(Percent.Cov.50 = mean(coverage.50, na.rm = TRUE), Percent.Cov.95 = mean(coverage.95, na.rm = TRUE)) %>% 
   distinct() %>% 
   ungroup()
-inc.rankings_all25 <- left_join(inc.rankings_all25, and_coverage_25, by = "model")
+inc.rankings_all25_ed <- left_join(inc.rankings_all25_ed, and_coverage_25_ed, by = "model")
 
 ### Figure 1: National ensemble Forecasts
 
-ntl_ens_forecasts <- all_dat25 %>% filter(location == "US", model == "FluSight-ensemble") %>% 
+ntl_ens_forecasts <- all_dat25_ed %>% filter(location == "US", model == "FluSight-ensemble") %>% 
   select(-logvalue) %>% 
   mutate(month = month(forecast_date)) %>%
   group_by(month) %>%
@@ -232,7 +232,7 @@ ntl_ens_forecasts <- all_dat25 %>% filter(location == "US", model == "FluSight-e
   ungroup()
 
 # Get forecast dates spaced 5 weeks apart
-forecast_dates_to_keep <- all_dat25 %>%
+forecast_dates_to_keep <- all_dat25_ed %>%
   filter(location == "US", model == "FluSight-ensemble") %>%
   distinct(forecast_date) %>%
   arrange(forecast_date) %>%
@@ -241,7 +241,7 @@ forecast_dates_to_keep <- all_dat25 %>%
   pull(forecast_date)
 
 # filter for dates and reshape
-ntl_ens_forecasts <- all_dat25 %>% 
+ntl_ens_forecasts <- all_dat25_ed %>% 
   filter(location == "US", model == "FluSight-ensemble") %>%
   filter(forecast_date %in% forecast_dates_to_keep) %>%
   select(-logvalue) %>%
@@ -253,19 +253,24 @@ ntl_ens_plt <- ggplot(ntl_ens_forecasts, aes(x = target_end_date, y = quantile_0
   geom_ribbon(aes(ymin = quantile_0.25, ymax = quantile_0.75, group = interaction(model, forecast_date), alpha = "50%"), fill = "#3BBBB0")+
   geom_line(aes(color = "Forecasted",group = interaction(model, forecast_date)))+
   geom_point(aes(color = "Forecasted", group = interaction(model, forecast_date)))+
-  geom_line(data = filter(obs_data25, location == "US"), aes(x = target_end_date, y = report, color = "Observed"))+
-  geom_point(data = filter(obs_data25, location == "US"), aes(x = target_end_date , y = report, color = "Observed"))+
+  geom_line(data = filter(obs_data25_ed, location == "US"), aes(x = target_end_date, y = report, color = "Observed"))+
+  geom_point(data = filter(obs_data25_ed, location == "US"), aes(x = target_end_date , y = report, color = "Observed"))+
   #  facet_grid(rows = vars(model))+
   scale_color_manual(values = c("Forecasted" = "#006166", "Observed" = "black"), name = "% ED Visits")+
   scale_alpha_manual(values = c("95%" = .25, "50%" = .50), name = "Prediction Interval")+
   theme_bw()+
-  scale_y_continuous(labels = scales::comma, name = "% ED Visits")+
+  scale_y_continuous(
+    labels = scales::comma,
+    breaks = scales::breaks_width(2),
+    name = "% ED Visits"
+  )+
+  #scale_y_continuous(labels = scales::comma, name = "% ED Visits")+
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y", name = NULL)
 
 ntl_ens_plt
 
 # filter and reshape for supplemental figure
-ntl_ens_forecasts_all <- all_dat25 %>% 
+ntl_ens_forecasts_all <- all_dat25_ed %>% 
   filter(location == "US", model == "FluSight-ensemble") %>%
   select(-logvalue) %>%
   pivot_wider(names_from = c(type, quantile), values_from = value) %>% 
@@ -276,24 +281,29 @@ supplemental_plt <- ggplot(ntl_ens_forecasts_all, aes(x = target_end_date, y = q
   geom_ribbon(aes(ymin = quantile_0.25, ymax = quantile_0.75, group = interaction(model, forecast_date), alpha = "50%"), fill = "#3BBBB0")+
   geom_line(aes(color = "Forecasted",group = interaction(model, forecast_date)))+
   geom_point(aes(color = "Forecasted", group = interaction(model, forecast_date)))+
-  geom_line(data = filter(obs_data25, location == "US"), aes(x = target_end_date, y = report, color = "Observed"))+
-  geom_point(data = filter(obs_data25, location == "US"), aes(x = target_end_date , y = report, color = "Observed"))+
+  geom_line(data = filter(obs_data25_ed, location == "US"), aes(x = target_end_date, y = report, color = "Observed"))+
+  geom_point(data = filter(obs_data25_ed, location == "US"), aes(x = target_end_date , y = report, color = "Observed"))+
   #  facet_grid(rows = vars(model))+
   scale_color_manual(values = c("Forecasted" = "#006166", "Observed" = "black"), name = "% ED Visits")+
   scale_alpha_manual(values = c("95%" = .25, "50%" = .50), name = "Prediction Interval")+
   theme_bw()+
-  scale_y_continuous(labels = scales::comma, name = "% ED Visits")+
+  scale_y_continuous(
+    labels = scales::comma,
+    breaks = scales::breaks_width(2),
+    name = "% ED Visits"
+  )+
+  #scale_y_continuous(labels = scales::comma, name = "% ED Visits")+
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y", name = NULL)
 
 supplemental_plt
 
 #ggsave(paste0(dashboard_r_code,"/figure1_ntl_ens.png"), plot = ntl_ens_plt, width=12, height=8)
-#ggsave(paste0(dashboard_r_code,"/viz/figure1_ntl_ensv1.png"), plot = ntl_ens_plt, width=8, height=4.5) ## original 12 x 8, aspect ratio for web is 16:9
-#ggsave(paste0(dashboard_r_code,"/viz/supplentalfigure1_ntl_ens.png"), plot = supplemental_plt, width=8, height=4.5) ## original 12 x 8, aspect ratio for web is 16:9
+#ggsave(paste0(dashboard_r_code,"/viz/figure1_ntl_ensv1_ed.png"), plot = ntl_ens_plt, width=8, height=4.5) ## original 12 x 8, aspect ratio for web is 16:9
+#ggsave(paste0(dashboard_r_code,"/viz/supplentalfigure1_ntl_ens_ed.png"), plot = supplemental_plt, width=8, height=4.5) ## original 12 x 8, aspect ratio for web is 16:9
 
 ## Figure 1 csv
 
-obs_data25_US <- obs_data25 %>% filter(location=="US")
+obs_data25_US_ed <- obs_data25_ed %>% filter(location=="US")
 
 ntl_ens_output <- ntl_ens_forecasts %>% 
   mutate(median = quantile_0.5,
@@ -311,7 +321,7 @@ ntl_ens_output <- ntl_ens_output %>%
                           "Intentionally left blank for visualization purposes", ##text needed for correct visualization on webpage
                           as.character(median)))
 
-# write.csv(ntl_ens_output, paste0(dashboard_r_code, "/output_data/figure1_data.csv"), row.names = FALSE)
+# write.csv(ntl_ens_output, paste0(dashboard_r_code, "/output_data/figure1_data_ed.csv"), row.names = FALSE)
 
 ## Supplemental Figure csv
 
@@ -336,9 +346,9 @@ supplemental_ntl_ens_output <- supplemental_ntl_ens_output %>%
 
 ### Table 1 
 
-inc.rankings_all <- mutate(inc.rankings_all25) %>% arrange(rel_wis)
+inc.rankings_all_ed <- mutate(inc.rankings_all25_ed) %>% arrange(rel_wis)
 
-inc.rankings_all %>% 
+inc.rankings_all_ed %>% 
   left_join(model_metadata3, join_by("model" == "model_id")) %>% 
   mutate(model_type = ifelse(ensemble_of_models == TRUE, paste("ens, ", model_type), model_type),
          display_name = paste0(model,"$^{", toupper(model_type), "}$")) %>% 
@@ -367,7 +377,7 @@ inc.rankings_all %>%
   kableExtra::footnote( general_title = "") %>%
   kableExtra::kable_classic()
 
-table1 <- inc.rankings_all %>% 
+table1 <- inc.rankings_all_ed %>% 
   left_join(model_metadata3, join_by("model" == "model_id")) %>% 
   mutate(model_type = ifelse(ensemble == TRUE, paste("ens, ", model_type), model_type),
          display_name = paste0(model," (", toupper(model_type),")")) %>% 
@@ -393,7 +403,7 @@ table1 <- inc.rankings_all %>%
 # write.csv(table1, paste0(dashboard_r_code, "/output_data/table1_data.csv"), row.names = FALSE)
 
 
-WIS_and_coverage_25 <- WIS_Season25 %>% 
+WIS_and_coverage_25_ed <- WIS_Season25_ed %>% 
   group_by(model, location_name) %>% 
   summarise(Percent.Cov.50 = mean(coverage.50, na.rm = TRUE), 
             Percent.Cov.95 = mean(coverage.95, na.rm = TRUE)) %>% 
@@ -402,7 +412,7 @@ WIS_and_coverage_25 <- WIS_Season25 %>%
 
 
 #scoring by location 
-inc.rankings_location <- raw_scores25_log %>% 
+inc.rankings_location_ed <- raw_scores25_log_ed %>% 
   filter(location != "US") %>% 
   summarise_scores(by = c("model", "location_name"), relative_skill = TRUE,  baseline = "FluSight-baseline", na.rm = TRUE) %>% 
   mutate(wis=round(interval_score,2),
@@ -414,18 +424,18 @@ inc.rankings_location <- raw_scores25_log %>%
   ungroup() %>%
   mutate(below = ifelse(wis < baseline_wis & model != "FluSight-baseline", 1, 0)) %>% 
   select(-baseline_wis) %>% 
-  left_join(WIS_and_coverage_25, by = join_by("model" == "model", "location_name" == "location_name"))
+  left_join(WIS_and_coverage_25_ed, by = join_by("model" == "model", "location_name" == "location_name"))
 
 
 ## scores table for figures and coverage
-Scores_tab25 <- scores_tab_function(inc.rankings_location, inc.rankings_all25, WIS_Season25)
+Scores_tab25_ed <- scores_tab_function(inc.rankings_location_ed, inc.rankings_all25_ed, WIS_Season25_ed)
 
 
-inc.rankings_all_nice <- inc.rankings_all25 %>% arrange(rel_wis) 
+inc.rankings_all_nice_ed <- inc.rankings_all25_ed %>% arrange(rel_wis) 
 
-scores <- inc.rankings_location %>% filter(is.finite(rel_wis)) %>% 
-  left_join(., y = inc.rankings_all_nice[,c("model")], by = c("model"))
-scores_order <- inc.rankings_all_nice
+scores <- inc.rankings_location_ed %>% filter(is.finite(rel_wis)) %>% 
+  left_join(., y = inc.rankings_all_nice_ed[,c("model")], by = c("model"))
+scores_order <- inc.rankings_all_nice_ed
 levels_order <- scores_order$model
 
 jurisdiction_scores <- scores %>% 
@@ -480,14 +490,14 @@ figure2_output <- scores %>% select(model, location_name, rel_wis) %>%
 #   ungroup()
 
 ## Figure 3 
-WIS_Season <- WIS_Season25 %>% rename("target_end_date" = "date", "WIS" = "wis")
+WIS_Season_ed <- WIS_Season25_ed %>% rename("target_end_date" = "date", "WIS" = "wis")
 
-coverage95_states <- WIS_Season %>% filter(location_name != "National") %>% 
+coverage95_states <- WIS_Season_ed %>% filter(location_name != "National") %>% 
   group_by(model, target_end_date, target) %>% 
   summarise(coverage95 = mean(coverage.95)) %>% 
   ungroup()
 
-coverage50_states <- WIS_Season %>% filter(location_name != "National") %>% 
+coverage50_states <- WIS_Season_ed %>% filter(location_name != "National") %>% 
   group_by(model, target_end_date, target) %>% 
   summarise(coverage50 = mean(coverage.50)) %>% 
   ungroup()
@@ -715,3 +725,326 @@ wis_plt <-
   )
 
 wis_plt
+
+
+
+
+
+
+
+
+############ Plots for Insight presentation #############################
+
+
+
+
+
+
+
+
+
+WIS_Season <- WIS_Season25_ed %>%
+  rename("target_end_date" = "date", "WIS" = "wis")
+
+coverage50_states <- WIS_Season %>%
+  filter(location_name != "National") %>% 
+  group_by(model, target_end_date, target) %>% 
+  summarise(coverage50 = mean(coverage.50), .groups = "drop")
+
+highlight_models <- c("FluSight-ensemble", "FluSight-baseline")#, "FluSight-lop_norm")
+
+coverage50_highlight <- coverage50_states %>%
+  filter(model %in% highlight_models)
+
+coverage50_other <- coverage50_states %>%
+  filter(!model %in% highlight_models)
+
+coverage_labels <- as_labeller(c(
+  `0 wk inc flu prop ed visits` = "0 Week Ahead",
+  `1 wk inc flu prop ed visits` = "1 Week Ahead", 
+  `2 wk inc flu prop ed visits` = "2 Week Ahead",
+  `3 wk inc flu prop ed visits` = "3 Week Ahead"
+))
+
+coverage_50_plt <-
+  ggplot() +
+  geom_line(
+    data = coverage50_other,
+    aes(
+      x = target_end_date,
+      y = coverage50,
+      group = model,
+      color = "Contributed Models"
+    ),
+    linewidth = 0.6,
+    alpha = 0.5
+  ) +
+  geom_line(
+    data = coverage50_highlight,
+    aes(
+      x = target_end_date,
+      y = coverage50,
+      group = model,
+      color = model
+    ),
+    linewidth = 1
+  ) +
+  geom_point(
+    data = coverage50_highlight,
+    aes(
+      x = target_end_date,
+      y = coverage50,
+      color = model
+    ),
+    size = 2
+  ) +
+  geom_hline(yintercept = 0.5, linetype = "dashed", color = "black", linewidth = 0.6) +
+  labs(y = "50% Coverage", x = "", color = "Model", title="50% ED Visit Coverage by Model") +
+  scale_color_manual(
+    values = c(
+      "FluSight-ensemble" = "#00a599",
+      "FluSight-baseline" = "#9b007e",
+      #"FluSight-lop_norm" = "#00575b",
+      "Contributed Models" = adjustcolor("grey50", .35)
+    ),
+    breaks = c(
+      "FluSight-ensemble",
+      "FluSight-baseline",
+      #"FluSight-lop_norm",
+      "Contributed Models"
+    ),
+    drop = FALSE
+  ) +
+  theme_bw() +
+  scale_x_date(
+    breaks = seq.Date(
+      from = min(coverage50_states$target_end_date, na.rm = TRUE),
+      to = max(coverage50_states$target_end_date, na.rm = TRUE),
+      by = "2 weeks"
+    ),
+    date_labels = "%d %b"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 60, hjust = 1),
+    panel.grid = element_blank(),
+    legend.position = "right"
+  ) +
+  facet_wrap(
+    facets = vars(target),
+    labeller = coverage_labels,
+    scales = "free_x"
+  )
+
+coverage_50_plt
+
+ggsave(paste0(dashboard_r_code,"/viz/figure3_coverage50.png"), width=10, height=8, plot = coverage_50_plt)
+
+
+
+
+###95% Coverage 
+WIS_Season <- WIS_Season25_ed %>%
+  rename("target_end_date" = "date", "WIS" = "wis")
+
+coverage95_states <- WIS_Season %>%
+  filter(location_name != "National") %>% 
+  group_by(model, target_end_date, target) %>% 
+  summarise(coverage95 = mean(coverage.95), .groups = "drop")
+
+highlight_models <- c("FluSight-ensemble", "FluSight-baseline")#, "FluSight-lop_norm")
+
+coverage95_highlight <- coverage95_states %>%
+  filter(model %in% highlight_models)
+
+coverage95_other <- coverage95_states %>%
+  filter(!model %in% highlight_models)
+
+coverage_labels <- as_labeller(c(
+  `0 wk inc flu prop ed visits` = "0 Week Ahead",
+  `1 wk inc flu prop ed visits` = "1 Week Ahead", 
+  `2 wk inc flu prop ed visits` = "2 Week Ahead",
+  `3 wk inc flu prop ed visits` = "3 Week Ahead"
+))
+coverage_95_plt <-
+  ggplot() +
+  geom_line(
+    data = coverage95_other,
+    aes(
+      x = target_end_date,
+      y = coverage95,
+      group = model,
+      color = "Contributed Models"
+    ),
+    linewidth = 0.6,
+    alpha = 0.5
+  ) +
+  geom_line(
+    data = coverage95_highlight,
+    aes(
+      x = target_end_date,
+      y = coverage95,
+      group = model,
+      color = model
+    ),
+    linewidth = 1
+  ) +
+  geom_point(
+    data = coverage95_highlight,
+    aes(
+      x = target_end_date,
+      y = coverage95,
+      color = model
+    ),
+    size = 2
+  ) +
+  geom_hline(yintercept = 0.95, linetype = "dashed", color = "black", linewidth = 0.6) +
+  labs(y = "95% Coverage", x = "", color = "Model", title="95% ED Visit Coverage by Model") +
+  scale_color_manual(
+    values = c(
+      "FluSight-ensemble" = "#00a599",
+      "FluSight-baseline" = "#9b007e",
+      #"FluSight-lop_norm" = "#00575b",
+      "Contributed Models" = adjustcolor("grey50", .35)
+    ),
+    breaks = c(
+      "FluSight-ensemble",
+      "FluSight-baseline",
+      #"FluSight-lop_norm",
+      "Contributed Models"
+    ),
+    drop = FALSE
+  ) +
+  theme_bw() +
+  scale_x_date(
+    breaks = seq.Date(
+      from = min(coverage95_states$target_end_date, na.rm = TRUE),
+      to = max(coverage95_states$target_end_date, na.rm = TRUE),
+      by = "2 weeks"
+    ),
+    date_labels = "%d %b"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 60, hjust = 1),
+    panel.grid = element_blank(),
+    legend.position = "right"
+  ) +
+  facet_wrap(
+    facets = vars(target),
+    labeller = coverage_labels,
+    scales = "free_x"
+  )
+
+coverage_95_plt
+
+ggsave(paste0(dashboard_r_code,"/viz/figure3_coverage95.png"), width=10, height=8, plot = coverage_95_plt)
+
+
+
+
+
+
+
+
+WIS_all25_nat = filter(WIS_alllocations25_ed, location_name == "National")
+
+
+library(dplyr)
+library(ggplot2)
+
+highlight_models <- c("FluSight-ensemble", "FluSight-baseline")#, "FluSight-lop_norm")
+
+wis_plot_data <- WIS_all25_nat %>%
+  mutate(
+    forecast_date = as.Date(forecast_date)
+  )
+
+wis_highlight <- wis_plot_data %>%
+  filter(model %in% highlight_models)
+
+wis_other <- wis_plot_data %>%
+  filter(!model %in% highlight_models)
+
+wis_labels <-  as_labeller(c(
+  `0 wk inc flu prop ed visits` = "0 Week Ahead",
+  `1 wk inc flu prop ed visits` = "1 Week Ahead", 
+  `2 wk inc flu prop ed visits` = "2 Week Ahead",
+  `3 wk inc flu prop ed visits` = "3 Week Ahead"
+))
+
+wis_plt <-
+  ggplot() +
+  geom_line(
+    data = wis_other,
+    aes(
+      x = forecast_date,
+      y = wis,
+      group = model,
+      color = "Contributed Models"
+    ),
+    linewidth = 0.6,
+    alpha = 0.5
+  ) +
+  geom_line(
+    data = wis_highlight,
+    aes(
+      x = forecast_date,
+      y = wis,
+      group = model,
+      color = model
+    ),
+    linewidth = 1
+  ) +
+  geom_point(
+    data = wis_highlight,
+    aes(
+      x = forecast_date,
+      y = wis,
+      color = model
+    ),
+    size = 2
+  ) +
+  labs(
+    y = "Log rWIS",
+    x = "",
+    color = "Model",
+    title = "Log rWIS by Week for ED Visit Forecasts"
+  ) +
+  scale_color_manual(
+    values = c(
+      "FluSight-ensemble" = "#00a599",
+      "FluSight-baseline" = "#9b007e",
+      #"FluSight-lop_norm" = "#00575b",
+      "Contributed Models" = adjustcolor("grey50", .35)
+    ),
+    breaks = c(
+      "FluSight-ensemble",
+      "FluSight-baseline",
+      #"FluSight-lop_norm",
+      "Contributed Models"
+    ),
+    drop = FALSE
+  ) +
+  theme_bw() +
+  scale_x_date(
+    breaks = seq.Date(
+      from = min(wis_plot_data$forecast_date, na.rm = TRUE),
+      to = max(wis_plot_data$forecast_date, na.rm = TRUE),
+      by = "2 weeks"
+    ),
+    date_labels = "%d %b"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 60, hjust = 1),
+    panel.grid = element_blank(),
+    legend.position = "right"
+  ) +
+  facet_wrap(
+    facets = vars(target),
+    labeller = wis_labels,
+    scales = "free_x"
+  )
+
+wis_plt
+
+ggsave(paste0(dashboard_r_code,"/viz/figure3_wis.png"), width=10, height=8, plot = wis_plt)
+

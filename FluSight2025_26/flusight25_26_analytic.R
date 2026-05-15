@@ -419,7 +419,8 @@ Scores_tab25 <- scores_tab_function(inc.rankings_location, inc.rankings_all25, W
 inc.rankings_all_nice <- inc.rankings_all25 %>% arrange(rel_wis) 
 
 scores <- inc.rankings_location %>% filter(is.finite(rel_wis)) %>% 
-  left_join(., y = inc.rankings_all_nice[,c("model")], by = c("model"))
+  left_join(., y = inc.rankings_all_nice[,c("model")], by = c("model")) %>% filter(model!="FluSight-HJudge_ensemble") %>% 
+  filter(model!="FluSight-mean_ensemble")
 scores_order <- inc.rankings_all_nice
 levels_order <- scores_order$model
 
@@ -718,11 +719,20 @@ ggsave(paste0(dashboard_r_code,"/viz/figure3_coverage95.png"), width=10, height=
 
 
 
-WIS_all25_nat = filter(WIS_alllocations25, location_name == "National")
+
+wis_season_by_model_25_log_nat <- raw_scores25_log %>%
+  filter(location == "US", model %in% include25$model) %>% 
+  summarise_scores(by = c("model", "forecast_date", "target"),relative_skill=TRUE,  baseline="FluSight-baseline", na.rm  = TRUE)%>%
+  mutate(wis=round(interval_score,2),
+         mae=round(ae_median,2),
+         rel_wis=round(scaled_rel_skill,2))%>%
+  select(model, wis,rel_wis, mae, forecast_date, target) ## Not using log coverage 
+
+WIS_all25_nat =wis_season_by_model_25_log_nat
 
 
-library(dplyr)
-library(ggplot2)
+
+
 
 highlight_models <- c("FluSight-ensemble", "FluSight-baseline")#, "FluSight-lop_norm")
 
@@ -750,7 +760,7 @@ wis_plt <-
     data = wis_other,
     aes(
       x = forecast_date,
-      y = wis,
+      y = rel_wis,
       group = model,
       color = "Contributed Models"
     ),
@@ -761,7 +771,7 @@ wis_plt <-
     data = wis_highlight,
     aes(
       x = forecast_date,
-      y = wis,
+      y = rel_wis,
       group = model,
       color = model
     ),
@@ -771,7 +781,7 @@ wis_plt <-
     data = wis_highlight,
     aes(
       x = forecast_date,
-      y = wis,
+      y = rel_wis,
       color = model
     ),
     size = 2
@@ -797,6 +807,7 @@ wis_plt <-
     ),
     drop = FALSE
   ) +
+  coord_cartesian(ylim = c(0, 10))+
   theme_bw() +
   scale_x_date(
     breaks = seq.Date(
@@ -818,5 +829,7 @@ wis_plt <-
   )
 
 wis_plt
+
+#ggsave(paste0("../../Desktop/figure3_wis_.png"), width=10, height=8, plot = wis_plt)
 
 ggsave(paste0(dashboard_r_code,"/viz/figure3_wis.png"), width=10, height=8, plot = wis_plt)

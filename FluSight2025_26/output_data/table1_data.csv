@@ -1,0 +1,44 @@
+"Model","Relative WIS","50% Coverage (%)","95% Coverage (%)","% of Forecasts Submitted"
+"Google_SAI-FluEns (ENS,  MECH, STAT)",0.57,48.7,93.08,98
+"CMU-TimeSeries (ENS,  STAT)",0.58,48.83,94.03,96
+"OHT_JHU-nbxd (ENS,  AI/ML)",0.58,41.35,83.01,100
+"UGA_flucast-INFLAenza (AI/ML, STAT)",0.6,47.4,87.97,92
+"UMass-flusion (ENS,  STAT)",0.6,32.49,79.47,96
+"FluSight-mean_ensemble (NA)",0.61,49.36,90.17,100
+"NAU-vulPES (ENS,  STAT)",0.62,42.33,92.24,100
+"FluSight-ensemble (ENS,  STAT)",0.63,46.92,88.21,100
+"FluSight-lop_norm (ENS,  STAT)",0.64,53.48,97.09,100
+"UVAFluX-FS_OptimWISE (ENS,  STAT)",0.64,41.27,85.11,84
+"MIGHTE-Joint (ENS,  AI/ML, STAT)",0.66,58.55,96.18,84
+"MIGHTE-Nsemble (ENS,  AI/ML, STAT)",0.66,52.29,92.2,100
+"UGA_flucast-Scenariocast (STAT)",0.66,43.98,89.95,92
+"NEU_ISI-AdaptiveEnsemble (ENS,  STAT)",0.67,34.02,73.99,92
+"CU-ARNB_Net (AI/ML)",0.74,52.39,93.69,88
+"CU-ensemble (ENS,  MECH, AI/ML, STAT)",0.74,49.94,86,100
+"NAU-FourCAT (STAT)",0.74,41.28,95.21,96
+"UGA_flucast-Copycat (STAT)",0.75,33.18,79.89,100
+"Cornell_JHU-hierarchSIR (MECH, AI/ML)",0.76,37.88,82.63,100
+"PSI-PROF (MECH, STAT)",0.76,52.82,96.15,100
+"PSI-PROF_MOA (MECH, STAT)",0.76,42.14,75.13,100
+"CEPH-Rtrend_fluH (MECH, STAT)",0.77,40,85.38,100
+"Gatech-ensemble_prob (ENS,  STAT)",0.78,41.6,79.23,95
+"NAU-epymorph (MECH)",0.79,28.14,70.3,100
+"UVAFluX-Ensemble (ENS,  AI/ML, STAT)",0.79,42.13,75.54,99
+"Gatech-ensemble_stat (ENS,  AI/ML, STAT)",0.8,43.85,77.44,100
+"UGA_CEID-auto_AVG_LB (STAT)",0.8,40,80.28,96
+"MOBS-EpyStrain_Flu (MECH, AI/ML)",0.83,35.11,72.57,88
+"MOBS-GLEAM_RL_FLUH (STAT)",0.83,23.04,58.35,98
+"NEU_ISI-FluBcast (MECH)",0.87,20.8,52.9,88
+"UNC_IDD-InfluPaint (AI/ML)",0.87,39.06,82.48,98
+"UMass-AR2 (AI/ML)",0.89,38.57,78.67,99
+"NIH-Flu_ARIMA (MECH, AI/ML, STAT)",0.9,22.26,63.49,86
+"UI_CompEpi-EpiGen (ENS,  AI/ML, STAT)",0.92,37.61,65.7,78
+"VTSanghani-PRIME (AI/ML)",0.97,50.8,72.04,86
+"FluSight-baseline (STAT)",1,30.49,83.21,100
+"UMass-trends_ensemble (ENS,  STAT)",1.03,36.26,61.97,100
+"SigSci-TSENS (ENS,  STAT)",1.05,48.8,78.42,80
+"UM-DeepOutbreak (AI/ML)",1.05,48.14,80.79,92
+"LosAlamos-ThinMint (STAT)",1.12,40.81,81.43,100
+"LosAlamos-DoSiDo (STAT)",1.15,46.3,91.45,100
+"UGA_CEID-Walk (STAT)",1.3,46.86,71.45,95
+"LosAlamos_NAU-CModel_Flu (MECH, AI/ML)",1.31,15.16,38.28,100
